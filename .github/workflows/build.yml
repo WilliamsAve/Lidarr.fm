@@ -1,0 +1,61 @@
+name: Build & Package Lidarr.fm Plugin
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Prepare Lidarr Reference Assemblies
+        run: python3 scripts/prepare-lidarr.py
+
+      - name: Determine Plugin Version
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="1.0.0"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and Test (Release)
+        run: dotnet test ./Lidarr.fm.sln -c Release -p:PluginVersion=${{ steps.version.outputs.version }}
+
+      - name: Upload Plugin Package Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lidarr.Plugin.LidarrFm.net8.0.zip
+          path: _temp/bin/Release/LidarrFm/Lidarr.Plugin.LidarrFm.net8.0.zip
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: _temp/bin/Release/LidarrFm/Lidarr.Plugin.LidarrFm.net8.0.zip
+          body: |
+            Minimum Lidarr Version: 3.1.0.0
+          generate_release_notes: true

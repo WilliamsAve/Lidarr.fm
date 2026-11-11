@@ -1,0 +1,20 @@
+# Build and temporary artifacts
+_temp/
+bin/
+obj/
+_output/
+_plugins/
+_tests/
+
+# IDE and OS files
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.DS_Store
+Thumbs.db
+
+# Packaged archives
+*.zip

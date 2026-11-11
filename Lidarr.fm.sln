@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LidarrFm", "src\LidarrFm\LidarrFm.csproj", "{81A5C2E3-4B21-4C9D-8F1A-7C9E1B2D3E4F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LidarrFm.Test", "tests\LidarrFm.Test\LidarrFm.Test.csproj", "{92B6D3F4-5C32-4D0E-9A2B-8D0F2C3E4F5A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{81A5C2E3-4B21-4C9D-8F1A-7C9E1B2D3E4F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81A5C2E3-4B21-4C9D-8F1A-7C9E1B2D3E4F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81A5C2E3-4B21-4C9D-8F1A-7C9E1B2D3E4F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81A5C2E3-4B21-4C9D-8F1A-7C9E1B2D3E4F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{92B6D3F4-5C32-4D0E-9A2B-8D0F2C3E4F5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{92B6D3F4-5C32-4D0E-9A2B-8D0F2C3E4F5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{92B6D3F4-5C32-4D0E-9A2B-8D0F2C3E4F5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{92B6D3F4-5C32-4D0E-9A2B-8D0F2C3E4F5A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
