@@ -1,6 +1,5 @@
 using FluentValidation.Results;
 using NLog;
-using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Parser;
 using NzbDrone.Core.Parser.Model;
@@ -14,13 +13,13 @@ namespace NzbDrone.Core.ImportLists.LidarrFm;
 /// preserving existing artists' monitoring/profile settings and applying configurable profiles
 /// and monitoring modes for new artists.
 /// </summary>
-public class LastFmRecommendImportList : ImportListBase<LastFmRecommendSettings>
+public class LidarrFmImportList : ImportListBase<LidarrFmImportListSettings>
 {
-    private readonly ILastFmApiClient _lastFmApiClient;
-    private readonly Func<IMusicBrainzAlbumResolver> _albumResolverFactory;
-    private readonly Func<ILastFmAlbumImportService> _albumImportServiceFactory;
+    private readonly ILidarrFmLastFmApiClient _lastFmApiClient;
+    private readonly Func<ILidarrFmMusicBrainzAlbumResolver> _albumResolverFactory;
+    private readonly Func<ILidarrFmAlbumImportService> _albumImportServiceFactory;
 
-    public override string Name => "Last.fm Recommended Albums";
+    public override string Name => "Last.fm Recommended Albums (Lidarr.fm)";
 
     public override ImportListType ListType => ImportListType.LastFm;
 
@@ -28,13 +27,13 @@ public class LastFmRecommendImportList : ImportListBase<LastFmRecommendSettings>
 
     /// <summary>
     /// Public constructor used by Lidarr's DryIoc container.
-    /// Resolves <see cref="IMusicBrainzAlbumResolver"/> and <see cref="ILastFmAlbumImportService"/> lazily via
+    /// Resolves <see cref="ILidarrFmMusicBrainzAlbumResolver"/> and <see cref="ILidarrFmAlbumImportService"/> lazily via
     /// <see cref="IServiceProvider"/> during <see cref="Fetch"/> to prevent a singleton circular dependency
-    /// between <c>IImportListFactory -> IEnumerable&lt;IImportList&gt; -> LastFmRecommendImportList</c> and
+    /// between <c>IImportListFactory -> IEnumerable&lt;IImportList&gt; -> LidarrFmImportList</c> and
     /// <c>QualityProfileService / MetadataProfileService -> IImportListFactory</c>.
     /// </summary>
-    public LastFmRecommendImportList(
-        ILastFmApiClient lastFmApiClient,
+    public LidarrFmImportList(
+        ILidarrFmLastFmApiClient lastFmApiClient,
         IServiceProvider serviceProvider,
         IImportListStatusService importListStatusService,
         IConfigService configService,
@@ -43,16 +42,16 @@ public class LastFmRecommendImportList : ImportListBase<LastFmRecommendSettings>
         : base(importListStatusService, configService, parsingService, logger)
     {
         _lastFmApiClient = lastFmApiClient;
-        _albumResolverFactory = () => (IMusicBrainzAlbumResolver)(serviceProvider.GetService(typeof(IMusicBrainzAlbumResolver))
-            ?? throw new InvalidOperationException("Unable to resolve IMusicBrainzAlbumResolver from container."));
-        _albumImportServiceFactory = () => (ILastFmAlbumImportService)(serviceProvider.GetService(typeof(ILastFmAlbumImportService))
-            ?? throw new InvalidOperationException("Unable to resolve ILastFmAlbumImportService from container."));
+        _albumResolverFactory = () => (ILidarrFmMusicBrainzAlbumResolver)(serviceProvider.GetService(typeof(ILidarrFmMusicBrainzAlbumResolver))
+            ?? throw new InvalidOperationException("Unable to resolve ILidarrFmMusicBrainzAlbumResolver from container."));
+        _albumImportServiceFactory = () => (ILidarrFmAlbumImportService)(serviceProvider.GetService(typeof(ILidarrFmAlbumImportService))
+            ?? throw new InvalidOperationException("Unable to resolve ILidarrFmAlbumImportService from container."));
     }
 
-    internal LastFmRecommendImportList(
-        ILastFmApiClient lastFmApiClient,
-        IMusicBrainzAlbumResolver albumResolver,
-        ILastFmAlbumImportService albumImportService,
+    internal LidarrFmImportList(
+        ILidarrFmLastFmApiClient lastFmApiClient,
+        ILidarrFmMusicBrainzAlbumResolver albumResolver,
+        ILidarrFmAlbumImportService albumImportService,
         IImportListStatusService importListStatusService,
         IConfigService configService,
         IParsingService parsingService,
@@ -68,13 +67,14 @@ public class LastFmRecommendImportList : ImportListBase<LastFmRecommendSettings>
     {
         get
         {
-            var config = new LastFmRecommendSettings();
+            var config = new LidarrFmImportListSettings();
             yield return new ImportListDefinition
             {
                 EnableAutomaticAdd = true,
                 ShouldMonitor = ImportListMonitorType.None,
                 ShouldMonitorExisting = false,
                 Implementation = GetType().Name,
+                ConfigContract = typeof(LidarrFmImportListSettings).Name,
                 Settings = config
             };
         }
@@ -89,7 +89,7 @@ public class LastFmRecommendImportList : ImportListBase<LastFmRecommendSettings>
         }
 
         // Ensure Lidarr's built-in ImportListSyncService never alters existing artists or albums
-        // after our LastFmAlbumImportService has applied the exact existing/new artist rules.
+        // after our LidarrFmAlbumImportService has applied the exact existing/new artist rules.
         importListDefinition.ShouldMonitorExisting = false;
         importListDefinition.ShouldMonitor = ImportListMonitorType.None;
 
@@ -100,7 +100,7 @@ public class LastFmRecommendImportList : ImportListBase<LastFmRecommendSettings>
                 candidates.Count, Settings.UserId);
 
             var albumResolver = _albumResolverFactory();
-            var resolvedAlbums = new List<ResolvedRecommendedAlbum>();
+            var resolvedAlbums = new List<LidarrFmResolvedAlbum>();
             var seenAlbumMbids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var candidate in candidates)

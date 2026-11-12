@@ -8,17 +8,17 @@ public class LastFmRecommendSettingsTests
     [Fact]
     public void DefaultSettings_RequireUsername_ToBeValid()
     {
-        var settings = new LastFmRecommendSettings();
+        var settings = new LidarrFmImportListSettings();
         var result = settings.Validate();
 
         Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == nameof(LastFmRecommendSettings.UserId));
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(LidarrFmImportListSettings.UserId));
     }
 
     [Fact]
     public void Settings_WithUsername_AreValidByDefault()
     {
-        var settings = new LastFmRecommendSettings
+        var settings = new LidarrFmImportListSettings
         {
             UserId = "nick_lastfm"
         };
@@ -29,12 +29,27 @@ public class LastFmRecommendSettingsTests
         Assert.Equal((int)LidarrFmNewArtistMonitorMode.ThatAlbum, settings.NewArtistMonitorMode);
     }
 
+    [Fact]
+    public void Settings_WhenApiKeyIsMaskedOrEmpty_FallBackToDefaultApiKey()
+    {
+        var settings = new LidarrFmImportListSettings
+        {
+            UserId = "nick_lastfm",
+            ApiKey = "********"
+        };
+
+        Assert.Equal(LidarrFmImportListSettings.DefaultLastFmApiKey, settings.ApiKey);
+
+        settings.ApiKey = "";
+        Assert.Equal(LidarrFmImportListSettings.DefaultLastFmApiKey, settings.ApiKey);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(101)]
     public void Settings_RejectInvalidSeedLimit(int invalidSeedLimit)
     {
-        var settings = new LastFmRecommendSettings
+        var settings = new LidarrFmImportListSettings
         {
             UserId = "nick_lastfm",
             SeedLimit = invalidSeedLimit
@@ -42,7 +57,7 @@ public class LastFmRecommendSettingsTests
 
         var result = settings.Validate();
         Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == nameof(LastFmRecommendSettings.SeedLimit));
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(LidarrFmImportListSettings.SeedLimit));
     }
 
     [Theory]
@@ -50,7 +65,7 @@ public class LastFmRecommendSettingsTests
     [InlineData(26)]
     public void Settings_RejectInvalidSimilarArtistsPerSeed(int invalidCount)
     {
-        var settings = new LastFmRecommendSettings
+        var settings = new LidarrFmImportListSettings
         {
             UserId = "nick_lastfm",
             SimilarArtistsPerSeed = invalidCount
@@ -58,6 +73,6 @@ public class LastFmRecommendSettingsTests
 
         var result = settings.Validate();
         Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == nameof(LastFmRecommendSettings.SimilarArtistsPerSeed));
+        Assert.Contains(result.Errors, e => e.PropertyName == nameof(LidarrFmImportListSettings.SimilarArtistsPerSeed));
     }
 }

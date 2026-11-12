@@ -7,9 +7,9 @@ using NzbDrone.Core.Music;
 
 namespace NzbDrone.Core.ImportLists.LidarrFm;
 
-public interface IMusicBrainzAlbumResolver
+public interface ILidarrFmMusicBrainzAlbumResolver
 {
-    ResolvedRecommendedAlbum? ResolveAlbum(LastFmRecommendedAlbumCandidate candidate, LastFmRecommendSettings settings);
+    LidarrFmResolvedAlbum? ResolveAlbum(LidarrFmRecommendedAlbumCandidate candidate, LidarrFmImportListSettings settings);
 }
 
 /// <summary>
@@ -21,9 +21,9 @@ public interface IMusicBrainzAlbumResolver
 /// Release MBIDs to Release-Group MBIDs via MusicBrainz WS/2 and falls back to Lidarr SkyHook
 /// and MusicBrainz Release-Group search when Last.fm omits the MBID.
 /// </summary>
-public class MusicBrainzAlbumResolver : IMusicBrainzAlbumResolver
+public class LidarrFmMusicBrainzAlbumResolver : ILidarrFmMusicBrainzAlbumResolver
 {
-    private const string UserAgent = "Lidarr.fm/1.0.0 (https://github.com/WilliamsAve/Lidarr.fm)";
+    private const string UserAgent = "Lidarr.fm/1.0.2 (https://github.com/WilliamsAve/Lidarr.fm)";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -34,7 +34,7 @@ public class MusicBrainzAlbumResolver : IMusicBrainzAlbumResolver
     private readonly ISearchForNewAlbum _albumSearchService;
     private readonly Logger _logger;
 
-    public MusicBrainzAlbumResolver(
+    public LidarrFmMusicBrainzAlbumResolver(
         IHttpClient httpClient,
         ISearchForNewAlbum albumSearchService,
         Logger logger)
@@ -44,9 +44,9 @@ public class MusicBrainzAlbumResolver : IMusicBrainzAlbumResolver
         _logger = logger;
     }
 
-    public ResolvedRecommendedAlbum? ResolveAlbum(
-        LastFmRecommendedAlbumCandidate candidate,
-        LastFmRecommendSettings settings)
+    public LidarrFmResolvedAlbum? ResolveAlbum(
+        LidarrFmRecommendedAlbumCandidate candidate,
+        LidarrFmImportListSettings settings)
     {
         if (string.IsNullOrWhiteSpace(candidate.AlbumTitle) || string.IsNullOrWhiteSpace(candidate.ArtistName))
         {
@@ -89,14 +89,14 @@ public class MusicBrainzAlbumResolver : IMusicBrainzAlbumResolver
         return null;
     }
 
-    private ResolvedRecommendedAlbum? TryResolveFromMusicBrainzRelease(
-        LastFmRecommendedAlbumCandidate candidate,
+    private LidarrFmResolvedAlbum? TryResolveFromMusicBrainzRelease(
+        LidarrFmRecommendedAlbumCandidate candidate,
         string musicBrainzBaseUrl)
     {
         try
         {
             var baseUrl = string.IsNullOrWhiteSpace(musicBrainzBaseUrl)
-                ? LastFmRecommendSettings.DefaultMusicBrainzBaseUrl
+                ? LidarrFmImportListSettings.DefaultMusicBrainzBaseUrl
                 : musicBrainzBaseUrl.TrimEnd('/') + "/";
 
             var request = new HttpRequestBuilder($"{baseUrl}release/{candidate.LastFmAlbumMbid}")
@@ -114,7 +114,7 @@ public class MusicBrainzAlbumResolver : IMusicBrainzAlbumResolver
                 return null;
             }
 
-            var release = JsonSerializer.Deserialize<MusicBrainzReleaseResponse>(response.Content, JsonOptions);
+            var release = JsonSerializer.Deserialize<LidarrFmMusicBrainzReleaseResponse>(response.Content, JsonOptions);
             var releaseGroupId = release?.ReleaseGroup?.Id;
             if (!IsValidMbid(releaseGroupId))
             {
@@ -148,7 +148,7 @@ public class MusicBrainzAlbumResolver : IMusicBrainzAlbumResolver
                 return null;
             }
 
-            return new ResolvedRecommendedAlbum(
+            return new LidarrFmResolvedAlbum(
                 AlbumMusicBrainzId: releaseGroupId!,
                 AlbumTitle: albumTitle,
                 ArtistMusicBrainzId: artistMbid!,
@@ -161,9 +161,9 @@ public class MusicBrainzAlbumResolver : IMusicBrainzAlbumResolver
         }
     }
 
-    private ResolvedRecommendedAlbum? TryResolveFromSkyHookByMbid(
+    private LidarrFmResolvedAlbum? TryResolveFromSkyHookByMbid(
         string albumMbid,
-        LastFmRecommendedAlbumCandidate candidate)
+        LidarrFmRecommendedAlbumCandidate candidate)
     {
         try
         {
@@ -177,7 +177,7 @@ public class MusicBrainzAlbumResolver : IMusicBrainzAlbumResolver
         }
     }
 
-    private ResolvedRecommendedAlbum? TryResolveFromSkyHookByTitleAndArtist(LastFmRecommendedAlbumCandidate candidate)
+    private LidarrFmResolvedAlbum? TryResolveFromSkyHookByTitleAndArtist(LidarrFmRecommendedAlbumCandidate candidate)
     {
         try
         {
@@ -191,14 +191,14 @@ public class MusicBrainzAlbumResolver : IMusicBrainzAlbumResolver
         }
     }
 
-    private ResolvedRecommendedAlbum? TryResolveFromMusicBrainzReleaseGroupSearch(
-        LastFmRecommendedAlbumCandidate candidate,
+    private LidarrFmResolvedAlbum? TryResolveFromMusicBrainzReleaseGroupSearch(
+        LidarrFmRecommendedAlbumCandidate candidate,
         string musicBrainzBaseUrl)
     {
         try
         {
             var baseUrl = string.IsNullOrWhiteSpace(musicBrainzBaseUrl)
-                ? LastFmRecommendSettings.DefaultMusicBrainzBaseUrl
+                ? LidarrFmImportListSettings.DefaultMusicBrainzBaseUrl
                 : musicBrainzBaseUrl.TrimEnd('/') + "/";
 
             var escapedAlbum = EscapeLucene(candidate.AlbumTitle);
@@ -221,7 +221,7 @@ public class MusicBrainzAlbumResolver : IMusicBrainzAlbumResolver
                 return null;
             }
 
-            var searchResult = JsonSerializer.Deserialize<MusicBrainzReleaseGroupSearchResponse>(response.Content, JsonOptions);
+            var searchResult = JsonSerializer.Deserialize<LidarrFmMusicBrainzReleaseGroupSearchResponse>(response.Content, JsonOptions);
             var releaseGroup = searchResult?.ReleaseGroups?
                 .FirstOrDefault(rg => IsValidMbid(rg.Id));
 
@@ -240,7 +240,7 @@ public class MusicBrainzAlbumResolver : IMusicBrainzAlbumResolver
                 return TryResolveFromSkyHookByMbid(releaseGroup.Id!, candidate);
             }
 
-            return new ResolvedRecommendedAlbum(
+            return new LidarrFmResolvedAlbum(
                 AlbumMusicBrainzId: releaseGroup.Id!,
                 AlbumTitle: !string.IsNullOrWhiteSpace(releaseGroup.Title) ? releaseGroup.Title! : candidate.AlbumTitle,
                 ArtistMusicBrainzId: artistMbid!,
@@ -253,9 +253,9 @@ public class MusicBrainzAlbumResolver : IMusicBrainzAlbumResolver
         }
     }
 
-    private static ResolvedRecommendedAlbum? MapSkyHookAlbum(
+    private static LidarrFmResolvedAlbum? MapSkyHookAlbum(
         Album? mappedAlbum,
-        LastFmRecommendedAlbumCandidate candidate)
+        LidarrFmRecommendedAlbumCandidate candidate)
     {
         if (mappedAlbum == null || !IsValidMbid(mappedAlbum.ForeignAlbumId))
         {
@@ -280,7 +280,7 @@ public class MusicBrainzAlbumResolver : IMusicBrainzAlbumResolver
             ? mappedAlbum.Title
             : candidate.AlbumTitle;
 
-        return new ResolvedRecommendedAlbum(
+        return new LidarrFmResolvedAlbum(
             AlbumMusicBrainzId: mappedAlbum.ForeignAlbumId,
             AlbumTitle: albumTitle,
             ArtistMusicBrainzId: artistMbid!,

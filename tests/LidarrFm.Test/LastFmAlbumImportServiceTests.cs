@@ -58,7 +58,7 @@ public class LastFmAlbumImportServiceTests
             RootFolderPath = "/new/music",
             ShouldSearch = true
         };
-        var settings = new LastFmRecommendSettings
+        var settings = new LidarrFmImportListSettings
         {
             UserId = "nick",
             NewArtistQualityProfileId = 11,
@@ -67,7 +67,7 @@ public class LastFmAlbumImportServiceTests
             NewArtistMonitorMode = (int)LidarrFmNewArtistMonitorMode.AllAlbums
         };
 
-        var resolved = new List<ResolvedRecommendedAlbum>
+        var resolved = new List<LidarrFmResolvedAlbum>
         {
             new(
                 AlbumMusicBrainzId: newAlbumMbid,
@@ -152,8 +152,8 @@ public class LastFmAlbumImportServiceTests
 
         var summary = service.ImportRecommendedAlbums(
             new ImportListDefinition { Id = 1, ShouldSearch = true },
-            new LastFmRecommendSettings { UserId = "nick" },
-            new List<ResolvedRecommendedAlbum>
+            new LidarrFmImportListSettings { UserId = "nick" },
+            new List<LidarrFmResolvedAlbum>
             {
                 new(existingAlbumMbid, "Mezzanine", existingArtistMbid, "Massive Attack")
             });
@@ -216,7 +216,7 @@ public class LastFmAlbumImportServiceTests
             ShouldSearch = true
         };
 
-        var settings = new LastFmRecommendSettings
+        var settings = new LidarrFmImportListSettings
         {
             UserId = "nick",
             NewArtistQualityProfileId = 5,
@@ -228,7 +228,7 @@ public class LastFmAlbumImportServiceTests
         var summary = service.ImportRecommendedAlbums(
             definition,
             settings,
-            new List<ResolvedRecommendedAlbum>
+            new List<LidarrFmResolvedAlbum>
             {
                 new(newAlbumMbid, "Dummy", newArtistMbid, "Portishead")
             });
@@ -285,8 +285,8 @@ public class LastFmAlbumImportServiceTests
 
         var summary = service.ImportRecommendedAlbums(
             new ImportListDefinition { Id = 1 },
-            new LastFmRecommendSettings { UserId = "nick" },
-            new List<ResolvedRecommendedAlbum>
+            new LidarrFmImportListSettings { UserId = "nick" },
+            new List<LidarrFmResolvedAlbum>
             {
                 new(albumMbid, "Dummy", artistMbid, "Portishead")
             });
@@ -296,7 +296,7 @@ public class LastFmAlbumImportServiceTests
         Assert.Empty(addAlbumService.AddedAlbums);
     }
 
-    private static LastFmAlbumImportService CreateService(
+    private static LidarrFmAlbumImportService CreateService(
         FakeArtistService? artistService = null,
         FakeAlbumService? albumService = null,
         FakeAddArtistService? addArtistService = null,
@@ -305,7 +305,7 @@ public class LastFmAlbumImportServiceTests
         FakeImportListExclusionService? exclusionService = null,
         FakeCommandQueueManager? commandQueue = null)
     {
-        return new LastFmAlbumImportService(
+        return new LidarrFmAlbumImportService(
             artistService ?? new FakeArtistService(),
             albumService ?? new FakeAlbumService(),
             addArtistService ?? new FakeAddArtistService(),

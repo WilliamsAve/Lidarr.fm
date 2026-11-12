@@ -4,9 +4,9 @@ using NzbDrone.Core.Validation;
 
 namespace NzbDrone.Core.ImportLists.LidarrFm;
 
-public class LastFmRecommendSettingsValidator : AbstractValidator<LastFmRecommendSettings>
+public class LidarrFmImportListSettingsValidator : AbstractValidator<LidarrFmImportListSettings>
 {
-    public LastFmRecommendSettingsValidator()
+    public LidarrFmImportListSettingsValidator()
     {
         RuleFor(c => c.UserId)
             .NotEmpty()
@@ -38,21 +38,26 @@ public class LastFmRecommendSettingsValidator : AbstractValidator<LastFmRecommen
     }
 }
 
-public class LastFmRecommendSettings : IImportListSettings
+public class LidarrFmImportListSettings : IImportListSettings
 {
-    private static readonly LastFmRecommendSettingsValidator Validator = new();
+    private static readonly LidarrFmImportListSettingsValidator Validator = new();
 
     public const string DefaultLastFmBaseUrl = "https://ws.audioscrobbler.com/2.0/";
     public const string DefaultLastFmApiKey = "204c76646d6020eee36bbc51a2fcd810";
     public const string DefaultMusicBrainzBaseUrl = "https://musicbrainz.org/ws/2/";
+    private const string MaskedPrivacyValue = "********";
 
-    public LastFmRecommendSettings()
+    private string _apiKey = DefaultLastFmApiKey;
+    private string _baseUrl = DefaultLastFmBaseUrl;
+    private string _musicBrainzBaseUrl = DefaultMusicBrainzBaseUrl;
+
+    public LidarrFmImportListSettings()
     {
         BaseUrl = DefaultLastFmBaseUrl;
         ApiKey = DefaultLastFmApiKey;
         MusicBrainzBaseUrl = DefaultMusicBrainzBaseUrl;
-        ActivitySource = (int)LastFmActivitySource.TopArtists;
-        TimePeriod = (int)LastFmTimePeriod.LastThreeMonths;
+        ActivitySource = (int)LidarrFmActivitySource.TopArtists;
+        TimePeriod = (int)LidarrFmTimePeriod.LastThreeMonths;
         SeedLimit = 15;
         SimilarArtistsPerSeed = 5;
         TopAlbumsPerArtist = 2;
@@ -63,13 +68,19 @@ public class LastFmRecommendSettings : IImportListSettings
     [FieldDefinition(0, Label = "Last.fm Username", HelpText = "Your Last.fm account username to query activity and generate album recommendations from.", Placeholder = "your_lastfm_username")]
     public string UserId { get; set; } = string.Empty;
 
-    [FieldDefinition(1, Label = "Last.fm API Key", Type = FieldType.Textbox, Privacy = PrivacyLevel.ApiKey, HelpText = "Last.fm API Key used to authenticate requests to Last.fm (a default key is pre-filled, or enter your own from last.fm/api/account/create).")]
-    public string ApiKey { get; set; }
+    [FieldDefinition(1, Label = "Last.fm API Key", Type = FieldType.Textbox, Privacy = PrivacyLevel.ApiKey, Advanced = true, HelpText = "Last.fm API Key used to authenticate requests to Last.fm (a default key is pre-filled, or enter your own from last.fm/api/account/create).")]
+    public string ApiKey
+    {
+        get => _apiKey;
+        set => _apiKey = string.IsNullOrWhiteSpace(value) || value.Trim() == MaskedPrivacyValue
+            ? DefaultLastFmApiKey
+            : value.Trim();
+    }
 
-    [FieldDefinition(2, Label = "Activity Source", Type = FieldType.Select, SelectOptions = typeof(LastFmActivitySource), HelpText = "Which Last.fm user activity feed to analyze when generating album recommendations.")]
+    [FieldDefinition(2, Label = "Activity Source", Type = FieldType.Select, SelectOptions = typeof(LidarrFmActivitySource), HelpText = "Which Last.fm user activity feed to analyze when generating album recommendations.")]
     public int ActivitySource { get; set; }
 
-    [FieldDefinition(3, Label = "Activity Time Period", Type = FieldType.Select, SelectOptions = typeof(LastFmTimePeriod), HelpText = "Time period for Top Artists / Top Albums / Top Tracks activity queries.")]
+    [FieldDefinition(3, Label = "Activity Time Period", Type = FieldType.Select, SelectOptions = typeof(LidarrFmTimePeriod), HelpText = "Time period for Top Artists / Top Albums / Top Tracks activity queries.")]
     public int TimePeriod { get; set; }
 
     [FieldDefinition(4, Label = "Activity Seed Count", Type = FieldType.Number, HelpText = "Number of artists/albums/tracks from your Last.fm activity to use as recommendation seeds (1-100).")]
@@ -97,10 +108,18 @@ public class LastFmRecommendSettings : IImportListSettings
     public string NewArtistRootFolderPath { get; set; } = string.Empty;
 
     [FieldDefinition(12, Label = "Last.fm API URL", Type = FieldType.Url, Advanced = true, HelpText = "Base URL for Last.fm Web Services 2.0 API.")]
-    public string BaseUrl { get; set; }
+    public string BaseUrl
+    {
+        get => _baseUrl;
+        set => _baseUrl = string.IsNullOrWhiteSpace(value) ? DefaultLastFmBaseUrl : value.Trim();
+    }
 
     [FieldDefinition(13, Label = "MusicBrainz API URL", Type = FieldType.Url, Advanced = true, HelpText = "Base URL for MusicBrainz WS/2 API used to resolve Last.fm Release MBIDs to Lidarr Release-Group MBIDs.")]
-    public string MusicBrainzBaseUrl { get; set; }
+    public string MusicBrainzBaseUrl
+    {
+        get => _musicBrainzBaseUrl;
+        set => _musicBrainzBaseUrl = string.IsNullOrWhiteSpace(value) ? DefaultMusicBrainzBaseUrl : value.Trim();
+    }
 
     public NzbDroneValidationResult Validate()
     {
@@ -108,7 +127,7 @@ public class LastFmRecommendSettings : IImportListSettings
     }
 }
 
-public enum LastFmActivitySource
+public enum LidarrFmActivitySource
 {
     [FieldOption(Label = "Top Artists", Hint = "Recommend albums based on your most-played artists")]
     TopArtists = 0,
@@ -126,7 +145,7 @@ public enum LastFmActivitySource
     LovedTracks = 4
 }
 
-public enum LastFmTimePeriod
+public enum LidarrFmTimePeriod
 {
     [FieldOption(Label = "Overall")]
     Overall = 0,

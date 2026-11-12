@@ -6,13 +6,13 @@ using NzbDrone.Core.ImportLists.Exceptions;
 
 namespace NzbDrone.Core.ImportLists.LidarrFm;
 
-public interface ILastFmApiClient
+public interface ILidarrFmLastFmApiClient
 {
-    void ValidateConnection(LastFmRecommendSettings settings);
-    IReadOnlyList<LastFmRecommendedAlbumCandidate> FetchRecommendedAlbums(LastFmRecommendSettings settings);
+    void ValidateConnection(LidarrFmImportListSettings settings);
+    IReadOnlyList<LidarrFmRecommendedAlbumCandidate> FetchRecommendedAlbums(LidarrFmImportListSettings settings);
 }
 
-public class LastFmApiClient : ILastFmApiClient
+public class LidarrFmLastFmApiClient : ILidarrFmLastFmApiClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -24,13 +24,13 @@ public class LastFmApiClient : ILastFmApiClient
     private readonly IHttpClient _httpClient;
     private readonly Logger _logger;
 
-    public LastFmApiClient(IHttpClient httpClient, Logger logger)
+    public LidarrFmLastFmApiClient(IHttpClient httpClient, Logger logger)
     {
         _httpClient = httpClient;
         _logger = logger;
     }
 
-    public void ValidateConnection(LastFmRecommendSettings settings)
+    public void ValidateConnection(LidarrFmImportListSettings settings)
     {
         var request = BuildActivityRequest(settings, limitOverride: 1);
         var response = ExecuteAndParse(request);
@@ -47,47 +47,47 @@ public class LastFmApiClient : ILastFmApiClient
         }
     }
 
-    public IReadOnlyList<LastFmRecommendedAlbumCandidate> FetchRecommendedAlbums(LastFmRecommendSettings settings)
+    public IReadOnlyList<LidarrFmRecommendedAlbumCandidate> FetchRecommendedAlbums(LidarrFmImportListSettings settings)
     {
         var activityRequest = BuildActivityRequest(settings);
         var activityResponse = ExecuteAndParse(activityRequest);
 
-        var source = (LastFmActivitySource)settings.ActivitySource;
+        var source = (LidarrFmActivitySource)settings.ActivitySource;
         var similarArtistLists = source switch
         {
-            LastFmActivitySource.TopArtists => FetchSimilarFromArtists(
+            LidarrFmActivitySource.TopArtists => FetchSimilarFromArtists(
                 settings,
-                activityResponse.TopArtists?.Artist ?? new List<LastFmArtistDto>()),
+                activityResponse.TopArtists?.Artist ?? new List<LidarrFmLastFmArtistDto>()),
 
-            LastFmActivitySource.TopAlbums => FetchSimilarFromArtists(
+            LidarrFmActivitySource.TopAlbums => FetchSimilarFromArtists(
                 settings,
-                (activityResponse.TopAlbums?.Album ?? new List<LastFmAlbumDto>())
+                (activityResponse.TopAlbums?.Album ?? new List<LidarrFmLastFmAlbumDto>())
                     .Where(a => a.Artist != null)
                     .Select(a => a.Artist!)
                     .ToList()),
 
-            LastFmActivitySource.TopTracks => FetchSimilarFromTracks(
+            LidarrFmActivitySource.TopTracks => FetchSimilarFromTracks(
                 settings,
-                activityResponse.TopTracks?.Track ?? new List<LastFmTrackDto>()),
+                activityResponse.TopTracks?.Track ?? new List<LidarrFmLastFmTrackDto>()),
 
-            LastFmActivitySource.RecentTracks => FetchSimilarFromTracks(
+            LidarrFmActivitySource.RecentTracks => FetchSimilarFromTracks(
                 settings,
-                activityResponse.RecentTracks?.Track ?? new List<LastFmTrackDto>()),
+                activityResponse.RecentTracks?.Track ?? new List<LidarrFmLastFmTrackDto>()),
 
-            LastFmActivitySource.LovedTracks => FetchSimilarFromTracks(
+            LidarrFmActivitySource.LovedTracks => FetchSimilarFromTracks(
                 settings,
-                activityResponse.LovedTracks?.Track ?? new List<LastFmTrackDto>()),
+                activityResponse.LovedTracks?.Track ?? new List<LidarrFmLastFmTrackDto>()),
 
             _ => FetchSimilarFromArtists(
                 settings,
-                activityResponse.TopArtists?.Artist ?? new List<LastFmArtistDto>())
+                activityResponse.TopArtists?.Artist ?? new List<LidarrFmLastFmArtistDto>())
         };
 
         var rankedArtists = GroupAndRankSimilarArtists(similarArtistLists);
         _logger.Debug("Lidarr.fm aggregated {0} unique recommended artists from Last.fm activity ({1}) for user '{2}'.",
             rankedArtists.Count, source, settings.UserId);
 
-        var candidates = new List<LastFmRecommendedAlbumCandidate>();
+        var candidates = new List<LidarrFmRecommendedAlbumCandidate>();
         var seenAlbumKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var (artist, occurrences, bestRank) in rankedArtists)
@@ -124,7 +124,7 @@ public class LastFmApiClient : ILastFmApiClient
                     ? album.Artist!.Mbid
                     : artist.Mbid;
 
-                candidates.Add(new LastFmRecommendedAlbumCandidate(
+                candidates.Add(new LidarrFmRecommendedAlbumCandidate(
                     AlbumTitle: album.Name.Trim(),
                     LastFmAlbumMbid: NullIfWhiteSpace(album.Mbid),
                     ArtistName: artistName.Trim(),
@@ -142,11 +142,11 @@ public class LastFmApiClient : ILastFmApiClient
         return candidates;
     }
 
-    private List<List<LastFmArtistDto>> FetchSimilarFromArtists(
-        LastFmRecommendSettings settings,
-        IReadOnlyList<LastFmArtistDto> seedArtists)
+    private List<List<LidarrFmLastFmArtistDto>> FetchSimilarFromArtists(
+        LidarrFmImportListSettings settings,
+        IReadOnlyList<LidarrFmLastFmArtistDto> seedArtists)
     {
-        var results = new List<List<LastFmArtistDto>>();
+        var results = new List<List<LidarrFmLastFmArtistDto>>();
         var seenSeeds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var seed in seedArtists)
@@ -172,11 +172,11 @@ public class LastFmApiClient : ILastFmApiClient
         return results;
     }
 
-    private List<List<LastFmArtistDto>> FetchSimilarFromTracks(
-        LastFmRecommendSettings settings,
-        IReadOnlyList<LastFmTrackDto> seedTracks)
+    private List<List<LidarrFmLastFmArtistDto>> FetchSimilarFromTracks(
+        LidarrFmImportListSettings settings,
+        IReadOnlyList<LidarrFmLastFmTrackDto> seedTracks)
     {
-        var results = new List<List<LastFmArtistDto>>();
+        var results = new List<List<LidarrFmLastFmArtistDto>>();
         var seenTrackKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var fallbackArtistSeeds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -215,7 +215,7 @@ public class LastFmApiClient : ILastFmApiClient
             try
             {
                 var response = ExecuteAndParse(request);
-                var similarArtists = (response.SimilarTracks?.Track ?? new List<LastFmTrackDto>())
+                var similarArtists = (response.SimilarTracks?.Track ?? new List<LidarrFmLastFmTrackDto>())
                     .Where(t => t.Artist != null && !string.IsNullOrWhiteSpace(t.Artist.EffectiveName))
                     .Select(t => t.Artist!)
                     .ToList();
@@ -244,7 +244,7 @@ public class LastFmApiClient : ILastFmApiClient
         return results;
     }
 
-    private List<LastFmArtistDto> FetchSimilarArtistsForArtist(LastFmRecommendSettings settings, string artistName)
+    private List<LidarrFmLastFmArtistDto> FetchSimilarArtistsForArtist(LidarrFmImportListSettings settings, string artistName)
     {
         var request = BuildMethodRequest(
             settings,
@@ -259,16 +259,16 @@ public class LastFmApiClient : ILastFmApiClient
         try
         {
             var response = ExecuteAndParse(request);
-            return response.SimilarArtists?.Artist ?? new List<LastFmArtistDto>();
+            return response.SimilarArtists?.Artist ?? new List<LidarrFmLastFmArtistDto>();
         }
         catch (Exception ex)
         {
             _logger.Warn(ex, "Failed to fetch similar artists from Last.fm for '{0}'.", artistName);
-            return new List<LastFmArtistDto>();
+            return new List<LidarrFmLastFmArtistDto>();
         }
     }
 
-    private List<LastFmAlbumDto> FetchTopAlbumsForArtist(LastFmRecommendSettings settings, LastFmArtistDto artist)
+    private List<LidarrFmLastFmAlbumDto> FetchTopAlbumsForArtist(LidarrFmImportListSettings settings, LidarrFmLastFmArtistDto artist)
     {
         var parameters = new Dictionary<string, string>
         {
@@ -293,19 +293,19 @@ public class LastFmApiClient : ILastFmApiClient
         try
         {
             var response = ExecuteAndParse(request);
-            return response.TopAlbums?.Album ?? new List<LastFmAlbumDto>();
+            return response.TopAlbums?.Album ?? new List<LidarrFmLastFmAlbumDto>();
         }
         catch (Exception ex)
         {
             _logger.Warn(ex, "Failed to fetch top albums from Last.fm for artist '{0}'.", artist.EffectiveName);
-            return new List<LastFmAlbumDto>();
+            return new List<LidarrFmLastFmAlbumDto>();
         }
     }
 
-    internal static List<(LastFmArtistDto Artist, int Occurrences, int BestRank)> GroupAndRankSimilarArtists(
-        IReadOnlyList<List<LastFmArtistDto>> similarLists)
+    internal static List<(LidarrFmLastFmArtistDto Artist, int Occurrences, int BestRank)> GroupAndRankSimilarArtists(
+        IReadOnlyList<List<LidarrFmLastFmArtistDto>> similarLists)
     {
-        var map = new Dictionary<string, (LastFmArtistDto Artist, int Occurrences, int BestRank)>(StringComparer.OrdinalIgnoreCase);
+        var map = new Dictionary<string, (LidarrFmLastFmArtistDto Artist, int Occurrences, int BestRank)>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var list in similarLists)
         {
@@ -344,25 +344,25 @@ public class LastFmApiClient : ILastFmApiClient
             .ToList();
     }
 
-    internal static HttpRequest BuildActivityRequest(LastFmRecommendSettings settings, int? limitOverride = null)
+    internal static HttpRequest BuildActivityRequest(LidarrFmImportListSettings settings, int? limitOverride = null)
     {
-        var method = (LastFmActivitySource)settings.ActivitySource switch
+        var method = (LidarrFmActivitySource)settings.ActivitySource switch
         {
-            LastFmActivitySource.TopArtists => "user.getTopArtists",
-            LastFmActivitySource.TopAlbums => "user.getTopAlbums",
-            LastFmActivitySource.TopTracks => "user.getTopTracks",
-            LastFmActivitySource.RecentTracks => "user.getRecentTracks",
-            LastFmActivitySource.LovedTracks => "user.getLovedTracks",
+            LidarrFmActivitySource.TopArtists => "user.getTopArtists",
+            LidarrFmActivitySource.TopAlbums => "user.getTopAlbums",
+            LidarrFmActivitySource.TopTracks => "user.getTopTracks",
+            LidarrFmActivitySource.RecentTracks => "user.getRecentTracks",
+            LidarrFmActivitySource.LovedTracks => "user.getLovedTracks",
             _ => "user.getTopArtists"
         };
 
-        var period = (LastFmTimePeriod)settings.TimePeriod switch
+        var period = (LidarrFmTimePeriod)settings.TimePeriod switch
         {
-            LastFmTimePeriod.LastWeek => "7day",
-            LastFmTimePeriod.LastMonth => "1month",
-            LastFmTimePeriod.LastThreeMonths => "3month",
-            LastFmTimePeriod.LastSixMonths => "6month",
-            LastFmTimePeriod.LastTwelveMonths => "12month",
+            LidarrFmTimePeriod.LastWeek => "7day",
+            LidarrFmTimePeriod.LastMonth => "1month",
+            LidarrFmTimePeriod.LastThreeMonths => "3month",
+            LidarrFmTimePeriod.LastSixMonths => "6month",
+            LidarrFmTimePeriod.LastTwelveMonths => "12month",
             _ => "overall"
         };
 
@@ -371,9 +371,9 @@ public class LastFmApiClient : ILastFmApiClient
             ["user"] = settings.UserId.Trim()
         };
 
-        if ((LastFmActivitySource)settings.ActivitySource is LastFmActivitySource.TopArtists
-            or LastFmActivitySource.TopAlbums
-            or LastFmActivitySource.TopTracks)
+        if ((LidarrFmActivitySource)settings.ActivitySource is LidarrFmActivitySource.TopArtists
+            or LidarrFmActivitySource.TopAlbums
+            or LidarrFmActivitySource.TopTracks)
         {
             parameters["period"] = period;
         }
@@ -382,7 +382,7 @@ public class LastFmApiClient : ILastFmApiClient
     }
 
     private static HttpRequest BuildMethodRequest(
-        LastFmRecommendSettings settings,
+        LidarrFmImportListSettings settings,
         string method,
         int limit,
         IReadOnlyDictionary<string, string> parameters)
@@ -403,7 +403,7 @@ public class LastFmApiClient : ILastFmApiClient
         return builder.Build();
     }
 
-    private LastFmApiResponse ExecuteAndParse(HttpRequest request)
+    private LidarrFmLastFmApiResponse ExecuteAndParse(HttpRequest request)
     {
         var httpResponse = _httpClient.Execute(request);
         if (httpResponse.StatusCode != HttpStatusCode.OK)
@@ -412,7 +412,7 @@ public class LastFmApiClient : ILastFmApiClient
             throw new ImportListException(importResponse, "Last.fm API call resulted in unexpected HTTP status code [{0}]", httpResponse.StatusCode);
         }
 
-        var parsed = JsonSerializer.Deserialize<LastFmApiResponse>(httpResponse.Content, JsonOptions);
+        var parsed = JsonSerializer.Deserialize<LidarrFmLastFmApiResponse>(httpResponse.Content, JsonOptions);
         if (parsed == null)
         {
             throw new InvalidOperationException("Unable to deserialize Last.fm API JSON response.");

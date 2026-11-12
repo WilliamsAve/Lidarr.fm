@@ -102,11 +102,11 @@ public class LastFmApiClientTests
             return CreateJsonResponse(request, "{}");
         });
 
-        var client = new LastFmApiClient(httpClient, LogManager.GetCurrentClassLogger());
-        var settings = new LastFmRecommendSettings
+        var client = new LidarrFmLastFmApiClient(httpClient, LogManager.GetCurrentClassLogger());
+        var settings = new LidarrFmImportListSettings
         {
             UserId = "nick_lastfm",
-            ActivitySource = (int)LastFmActivitySource.TopArtists,
+            ActivitySource = (int)LidarrFmActivitySource.TopArtists,
             SeedLimit = 5,
             SimilarArtistsPerSeed = 5,
             TopAlbumsPerArtist = 1,
@@ -191,11 +191,11 @@ public class LastFmApiClientTests
             return CreateJsonResponse(request, "{}");
         });
 
-        var client = new LastFmApiClient(httpClient, LogManager.GetCurrentClassLogger());
-        var settings = new LastFmRecommendSettings
+        var client = new LidarrFmLastFmApiClient(httpClient, LogManager.GetCurrentClassLogger());
+        var settings = new LidarrFmImportListSettings
         {
             UserId = "nick_lastfm",
-            ActivitySource = (int)LastFmActivitySource.RecentTracks,
+            ActivitySource = (int)LidarrFmActivitySource.RecentTracks,
             SeedLimit = 5,
             SimilarArtistsPerSeed = 5,
             TopAlbumsPerArtist = 1,

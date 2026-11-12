@@ -47,9 +47,9 @@ public class MusicBrainzAlbumResolverTests
         });
 
         var albumSearch = new FakeSearchForNewAlbum((_, _) => new List<Album>());
-        var resolver = new MusicBrainzAlbumResolver(httpClient, albumSearch, LogManager.GetCurrentClassLogger());
+        var resolver = new LidarrFmMusicBrainzAlbumResolver(httpClient, albumSearch, LogManager.GetCurrentClassLogger());
 
-        var candidate = new LastFmRecommendedAlbumCandidate(
+        var candidate = new LidarrFmRecommendedAlbumCandidate(
             AlbumTitle: "Mezzanine",
             LastFmAlbumMbid: releaseMbid,
             ArtistName: "Massive Attack",
@@ -57,7 +57,7 @@ public class MusicBrainzAlbumResolverTests
             SimilarityOccurrences: 2,
             BestSimilarityRank: 0);
 
-        var resolved = resolver.ResolveAlbum(candidate, new LastFmRecommendSettings { UserId = "nick" });
+        var resolved = resolver.ResolveAlbum(candidate, new LidarrFmImportListSettings { UserId = "nick" });
 
         Assert.NotNull(resolved);
         Assert.Equal(expectedReleaseGroupMbid, resolved!.AlbumMusicBrainzId);
@@ -95,8 +95,8 @@ public class MusicBrainzAlbumResolverTests
             return new List<Album>();
         });
 
-        var resolver = new MusicBrainzAlbumResolver(httpClient, albumSearch, LogManager.GetCurrentClassLogger());
-        var candidate = new LastFmRecommendedAlbumCandidate(
+        var resolver = new LidarrFmMusicBrainzAlbumResolver(httpClient, albumSearch, LogManager.GetCurrentClassLogger());
+        var candidate = new LidarrFmRecommendedAlbumCandidate(
             AlbumTitle: "Dummy",
             LastFmAlbumMbid: null,
             ArtistName: "Portishead",
@@ -104,7 +104,7 @@ public class MusicBrainzAlbumResolverTests
             SimilarityOccurrences: 1,
             BestSimilarityRank: 0);
 
-        var resolved = resolver.ResolveAlbum(candidate, new LastFmRecommendSettings { UserId = "nick" });
+        var resolved = resolver.ResolveAlbum(candidate, new LidarrFmImportListSettings { UserId = "nick" });
 
         Assert.NotNull(resolved);
         Assert.Equal(expectedReleaseGroupMbid, resolved!.AlbumMusicBrainzId);

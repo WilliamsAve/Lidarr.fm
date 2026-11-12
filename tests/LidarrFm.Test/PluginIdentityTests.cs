@@ -1,7 +1,12 @@
 using DryIoc;
+using Lidarr.Api.V1.ImportLists;
+using Lidarr.Http.ClientSchema;
 using NzbDrone.Common.Composition.Extensions;
+using NzbDrone.Common.Reflection;
+using NzbDrone.Common.Serializer;
 using NzbDrone.Core.ImportLists;
 using NzbDrone.Core.ImportLists.LidarrFm;
+using NzbDrone.Core.Localization;
 using NzbDrone.Core.Plugins;
 using Xunit;
 
@@ -21,15 +26,69 @@ public class PluginIdentityTests
     }
 
     [Fact]
-    public void ExportedTypes_IncludePluginAndImportList()
+    public void ExportedTypes_AllPrefixedWithLidarrFm_AvoidingCrossPluginCollisions()
     {
         var exportedTypes = typeof(LidarrFmPlugin).Assembly.GetExportedTypes();
 
         Assert.Contains(typeof(LidarrFmPlugin), exportedTypes);
-        Assert.Contains(typeof(LastFmRecommendImportList), exportedTypes);
-        Assert.Contains(typeof(LastFmRecommendSettings), exportedTypes);
+        Assert.Contains(typeof(LidarrFmImportList), exportedTypes);
+        Assert.Contains(typeof(LidarrFmImportListSettings), exportedTypes);
         Assert.True(typeof(IPlugin).IsAssignableFrom(typeof(LidarrFmPlugin)));
-        Assert.True(typeof(IImportList).IsAssignableFrom(typeof(LastFmRecommendImportList)));
+        Assert.True(typeof(IImportList).IsAssignableFrom(typeof(LidarrFmImportList)));
+
+        // Every exported type must be uniquely prefixed with LidarrFm (or ILidarrFm for interfaces)
+        // so ReflectionExtensions.FindTypeByName never collides with other plugins (e.g. Tubifarry's LastFmRecommendSettings).
+        foreach (var exportedType in exportedTypes)
+        {
+            var normalizedName = exportedType.IsInterface && exportedType.Name.StartsWith('I')
+                ? exportedType.Name[1..]
+                : exportedType.Name;
+            Assert.StartsWith("LidarrFm", normalizedName);
+        }
+
+        var foundSettingsType = ReflectionExtensions.FindTypeByName(nameof(LidarrFmImportListSettings));
+        Assert.Equal(typeof(LidarrFmImportListSettings), foundSettingsType);
+    }
+
+    [Fact]
+    public void ImportListResourceMapper_SchemaToModelRoundtrip_ResolvesConfigContractAndPreservesDefaultApiKey()
+    {
+        using var container = new Container(rules => rules.WithNzbDroneRules());
+        container.RegisterInstance<ILocalizationService>(new FakeLocalizationService());
+        SchemaBuilder.Initialize(container);
+
+        var mapper = new ImportListResourceMapper();
+        var defaultDef = new ImportListDefinition
+        {
+            Name = "Last.fm Recommended Albums (Lidarr.fm)",
+            Implementation = nameof(LidarrFmImportList),
+            ImplementationName = "Last.fm Recommended Albums (Lidarr.fm)",
+            ConfigContract = nameof(LidarrFmImportListSettings),
+            EnableAutomaticAdd = true,
+            Settings = new LidarrFmImportListSettings()
+        };
+
+        // 1. Simulate GET /api/v1/importlist/schema
+        var schemaResource = mapper.ToResource(defaultDef);
+        var apiKeyField = Assert.Single(schemaResource.Fields, f => f.Name == "apiKey");
+        Assert.Equal("********", apiKeyField.Value);
+
+        // 2. Simulate user entering their Last.fm Username in the UI and posting to POST /api/v1/importlist/test
+        var userIdField = Assert.Single(schemaResource.Fields, f => f.Name == "userId");
+        userIdField.Value = "nick_lastfm";
+
+        var jsonPayload = STJson.ToJson(schemaResource);
+        var postedResource = STJson.Deserialize<ImportListResource>(jsonPayload);
+
+        // 3. Simulate ProviderControllerBase.Test / CreateProvider (existingDefinition is null for new list)
+        var mappedDefinition = mapper.ToModel(postedResource, existingDefinition: null);
+
+        var mappedSettings = Assert.IsType<LidarrFmImportListSettings>(mappedDefinition.Settings);
+        Assert.Equal("nick_lastfm", mappedSettings.UserId);
+        Assert.Equal(LidarrFmImportListSettings.DefaultLastFmApiKey, mappedSettings.ApiKey);
+        Assert.Equal(LidarrFmImportListSettings.DefaultLastFmBaseUrl, mappedSettings.BaseUrl);
+        Assert.Equal(LidarrFmImportListSettings.DefaultMusicBrainzBaseUrl, mappedSettings.MusicBrainzBaseUrl);
+        Assert.True(mappedSettings.Validate().IsValid);
     }
 
     [Fact]
@@ -65,20 +124,27 @@ public class PluginIdentityTests
         container.RegisterDelegate<NzbDrone.Core.Configuration.IConfigFileProvider>(_ => null!);
 
         // Validate that DryIoc can compile the full dependency graph for IImportListFactory,
-        // IQualityProfileService, IMetadataProfileService, ITagService, LastFmRecommendImportList,
-        // IMusicBrainzAlbumResolver, ILastFmAlbumImportService, and ILastFmApiClient with zero errors.
+        // IQualityProfileService, IMetadataProfileService, ITagService, LidarrFmImportList,
+        // ILidarrFmMusicBrainzAlbumResolver, ILidarrFmAlbumImportService, and ILidarrFmLastFmApiClient with zero errors.
         var errors = container.Validate(
             ServiceInfo.Of<IImportListFactory>(),
             ServiceInfo.Of<NzbDrone.Core.Profiles.Qualities.IQualityProfileService>(),
             ServiceInfo.Of<NzbDrone.Core.Profiles.Metadata.IMetadataProfileService>(),
             ServiceInfo.Of<NzbDrone.Core.Tags.ITagService>(),
-            ServiceInfo.Of<LastFmRecommendImportList>(),
-            ServiceInfo.Of<IMusicBrainzAlbumResolver>(),
-            ServiceInfo.Of<ILastFmAlbumImportService>(),
-            ServiceInfo.Of<ILastFmApiClient>());
+            ServiceInfo.Of<LidarrFmImportList>(),
+            ServiceInfo.Of<ILidarrFmMusicBrainzAlbumResolver>(),
+            ServiceInfo.Of<ILidarrFmAlbumImportService>(),
+            ServiceInfo.Of<ILidarrFmLastFmApiClient>());
 
         Assert.Empty(errors);
         Assert.NotNull(container.Resolve<IServiceProvider>());
+    }
+
+    private sealed class FakeLocalizationService : ILocalizationService
+    {
+        public Dictionary<string, string> GetLocalizationDictionary() => new();
+        public string GetLocalizedString(string phrase) => phrase;
+        public string GetLocalizedString(string phrase, Dictionary<string, object> tokens) => phrase;
     }
 
     private sealed class TestMainDatabase : NzbDrone.Core.Datastore.IMainDatabase

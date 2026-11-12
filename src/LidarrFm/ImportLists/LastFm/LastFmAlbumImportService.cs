@@ -11,19 +11,19 @@ using NzbDrone.Core.RootFolders;
 namespace NzbDrone.Core.ImportLists.LidarrFm;
 
 public sealed record LidarrFmImportSummary(
-    IReadOnlyList<ResolvedRecommendedAlbum> ProcessedAlbums,
+    IReadOnlyList<LidarrFmResolvedAlbum> ProcessedAlbums,
     int NewArtistsAdded,
     int NewArtistAlbumsAdded,
     int ExistingArtistAlbumsAdded,
     int ExistingAlbumsSkipped,
     int ExcludedItemsSkipped);
 
-public interface ILastFmAlbumImportService
+public interface ILidarrFmAlbumImportService
 {
     LidarrFmImportSummary ImportRecommendedAlbums(
         ImportListDefinition definition,
-        LastFmRecommendSettings settings,
-        IReadOnlyList<ResolvedRecommendedAlbum> resolvedAlbums);
+        LidarrFmImportListSettings settings,
+        IReadOnlyList<LidarrFmResolvedAlbum> resolvedAlbums);
 }
 
 /// <summary>
@@ -42,7 +42,7 @@ public interface ILastFmAlbumImportService
 ///      Monitoring Mode (Monitor That Album, Monitor Existing Albums, Monitor All Albums, or
 ///      Monitor Future Albums).
 /// </summary>
-public class LastFmAlbumImportService : ILastFmAlbumImportService
+public class LidarrFmAlbumImportService : ILidarrFmAlbumImportService
 {
     private readonly IArtistService _artistService;
     private readonly IAlbumService _albumService;
@@ -56,7 +56,7 @@ public class LastFmAlbumImportService : ILastFmAlbumImportService
     private readonly IManageCommandQueue _commandQueueManager;
     private readonly Logger _logger;
 
-    public LastFmAlbumImportService(
+    public LidarrFmAlbumImportService(
         IArtistService artistService,
         IAlbumService albumService,
         IAddArtistService addArtistService,
@@ -84,15 +84,15 @@ public class LastFmAlbumImportService : ILastFmAlbumImportService
 
     public LidarrFmImportSummary ImportRecommendedAlbums(
         ImportListDefinition definition,
-        LastFmRecommendSettings settings,
-        IReadOnlyList<ResolvedRecommendedAlbum> resolvedAlbums)
+        LidarrFmImportListSettings settings,
+        IReadOnlyList<LidarrFmResolvedAlbum> resolvedAlbums)
     {
         var exclusions = _exclusionService.All()
             .Where(x => !string.IsNullOrWhiteSpace(x.ForeignId))
             .Select(x => x.ForeignId)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var processed = new List<ResolvedRecommendedAlbum>();
+        var processed = new List<LidarrFmResolvedAlbum>();
         var newArtistsToAdd = new List<Artist>();
         var newArtistsByMbid = new Dictionary<string, Artist>(StringComparer.OrdinalIgnoreCase);
         var newArtistAlbumsToAdd = new List<Album>();
@@ -108,7 +108,7 @@ public class LastFmAlbumImportService : ILastFmAlbumImportService
 
         foreach (var item in resolvedAlbums)
         {
-            if (!MusicBrainzAlbumResolver.IsValidMbid(item.AlbumMusicBrainzId))
+            if (!LidarrFmMusicBrainzAlbumResolver.IsValidMbid(item.AlbumMusicBrainzId))
             {
                 continue;
             }
@@ -125,7 +125,7 @@ public class LastFmAlbumImportService : ILastFmAlbumImportService
                 continue;
             }
 
-            var resolvedItem = new ResolvedRecommendedAlbum(
+            var resolvedItem = new LidarrFmResolvedAlbum(
                 AlbumMusicBrainzId: item.AlbumMusicBrainzId,
                 AlbumTitle: canonicalAlbumTitle,
                 ArtistMusicBrainzId: canonicalArtistMbid,
@@ -231,7 +231,7 @@ public class LastFmAlbumImportService : ILastFmAlbumImportService
 
     private void ProcessForExistingArtist(
         Artist existingArtist,
-        ResolvedRecommendedAlbum item,
+        LidarrFmResolvedAlbum item,
         List<Album> existingArtistAlbumsToAdd,
         ref int existingAlbumsSkipped)
     {
@@ -286,7 +286,7 @@ public class LastFmAlbumImportService : ILastFmAlbumImportService
         int qualityProfileId,
         int metadataProfileId,
         string rootFolderPath,
-        ResolvedRecommendedAlbum item,
+        LidarrFmResolvedAlbum item,
         DateTime? releaseDate,
         List<Artist> newArtistsToAdd,
         Dictionary<string, Artist> newArtistsByMbid,
@@ -387,7 +387,7 @@ public class LastFmAlbumImportService : ILastFmAlbumImportService
     }
 
     private (string ArtistMbid, string ArtistName, string AlbumTitle, DateTime? ReleaseDate)
-        LookupAlbumSkyHookMetadata(ResolvedRecommendedAlbum item)
+        LookupAlbumSkyHookMetadata(LidarrFmResolvedAlbum item)
     {
         try
         {
@@ -420,7 +420,7 @@ public class LastFmAlbumImportService : ILastFmAlbumImportService
         return (item.ArtistMusicBrainzId, item.ArtistName, item.AlbumTitle, null);
     }
 
-    private int ResolveQualityProfileId(ImportListDefinition definition, LastFmRecommendSettings settings)
+    private int ResolveQualityProfileId(ImportListDefinition definition, LidarrFmImportListSettings settings)
     {
         if (settings.NewArtistQualityProfileId > 0)
         {
@@ -435,7 +435,7 @@ public class LastFmAlbumImportService : ILastFmAlbumImportService
         return _qualityProfileRepository.All().FirstOrDefault()?.Id ?? 1;
     }
 
-    private int ResolveMetadataProfileId(ImportListDefinition definition, LastFmRecommendSettings settings)
+    private int ResolveMetadataProfileId(ImportListDefinition definition, LidarrFmImportListSettings settings)
     {
         if (settings.NewArtistMetadataProfileId > 0)
         {
@@ -450,7 +450,7 @@ public class LastFmAlbumImportService : ILastFmAlbumImportService
         return _metadataProfileRepository.All().FirstOrDefault()?.Id ?? 1;
     }
 
-    private string ResolveRootFolderPath(ImportListDefinition definition, LastFmRecommendSettings settings)
+    private string ResolveRootFolderPath(ImportListDefinition definition, LidarrFmImportListSettings settings)
     {
         if (!string.IsNullOrWhiteSpace(settings.NewArtistRootFolderPath))
         {

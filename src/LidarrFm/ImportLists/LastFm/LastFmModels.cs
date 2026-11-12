@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace NzbDrone.Core.ImportLists.LidarrFm;
 
-public sealed class LastFmApiResponse
+internal sealed class LidarrFmLastFmApiResponse
 {
     [JsonPropertyName("error")]
     public int? Error { get; set; }
@@ -11,46 +11,46 @@ public sealed class LastFmApiResponse
     public string? Message { get; set; }
 
     [JsonPropertyName("topartists")]
-    public LastFmArtistListContainer? TopArtists { get; set; }
+    public LidarrFmLastFmArtistListContainer? TopArtists { get; set; }
 
     [JsonPropertyName("topalbums")]
-    public LastFmAlbumListContainer? TopAlbums { get; set; }
+    public LidarrFmLastFmAlbumListContainer? TopAlbums { get; set; }
 
     [JsonPropertyName("toptracks")]
-    public LastFmTrackListContainer? TopTracks { get; set; }
+    public LidarrFmLastFmTrackListContainer? TopTracks { get; set; }
 
     [JsonPropertyName("recenttracks")]
-    public LastFmTrackListContainer? RecentTracks { get; set; }
+    public LidarrFmLastFmTrackListContainer? RecentTracks { get; set; }
 
     [JsonPropertyName("lovedtracks")]
-    public LastFmTrackListContainer? LovedTracks { get; set; }
+    public LidarrFmLastFmTrackListContainer? LovedTracks { get; set; }
 
     [JsonPropertyName("similarartists")]
-    public LastFmArtistListContainer? SimilarArtists { get; set; }
+    public LidarrFmLastFmArtistListContainer? SimilarArtists { get; set; }
 
     [JsonPropertyName("similartracks")]
-    public LastFmTrackListContainer? SimilarTracks { get; set; }
+    public LidarrFmLastFmTrackListContainer? SimilarTracks { get; set; }
 }
 
-public sealed class LastFmArtistListContainer
+internal sealed class LidarrFmLastFmArtistListContainer
 {
     [JsonPropertyName("artist")]
-    public List<LastFmArtistDto> Artist { get; set; } = new();
+    public List<LidarrFmLastFmArtistDto> Artist { get; set; } = new();
 }
 
-public sealed class LastFmAlbumListContainer
+internal sealed class LidarrFmLastFmAlbumListContainer
 {
     [JsonPropertyName("album")]
-    public List<LastFmAlbumDto> Album { get; set; } = new();
+    public List<LidarrFmLastFmAlbumDto> Album { get; set; } = new();
 }
 
-public sealed class LastFmTrackListContainer
+internal sealed class LidarrFmLastFmTrackListContainer
 {
     [JsonPropertyName("track")]
-    public List<LastFmTrackDto> Track { get; set; } = new();
+    public List<LidarrFmLastFmTrackDto> Track { get; set; } = new();
 }
 
-public sealed class LastFmArtistDto
+internal sealed class LidarrFmLastFmArtistDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -67,7 +67,7 @@ public sealed class LastFmArtistDto
     public string EffectiveName => !string.IsNullOrWhiteSpace(Name) ? Name : (TextName ?? string.Empty);
 }
 
-public sealed class LastFmAlbumDto
+internal sealed class LidarrFmLastFmAlbumDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -83,10 +83,10 @@ public sealed class LastFmAlbumDto
     public long? PlayCount { get; set; }
 
     [JsonPropertyName("artist")]
-    public LastFmArtistDto? Artist { get; set; }
+    public LidarrFmLastFmArtistDto? Artist { get; set; }
 }
 
-public sealed class LastFmTrackDto
+internal sealed class LidarrFmLastFmTrackDto
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
@@ -98,13 +98,13 @@ public sealed class LastFmTrackDto
     public string? Url { get; set; }
 
     [JsonPropertyName("artist")]
-    public LastFmArtistDto? Artist { get; set; }
+    public LidarrFmLastFmArtistDto? Artist { get; set; }
 }
 
 /// <summary>
 /// Represents a recommended album candidate from Last.fm prior to MusicBrainz Release-Group resolution.
 /// </summary>
-public sealed record LastFmRecommendedAlbumCandidate(
+public sealed record LidarrFmRecommendedAlbumCandidate(
     string AlbumTitle,
     string? LastFmAlbumMbid,
     string ArtistName,
@@ -115,7 +115,7 @@ public sealed record LastFmRecommendedAlbumCandidate(
 /// <summary>
 /// Represents a recommended album resolved to its canonical Lidarr MusicBrainz Release-Group ID and Artist MusicBrainz ID.
 /// </summary>
-public sealed record ResolvedRecommendedAlbum(
+public sealed record LidarrFmResolvedAlbum(
     string AlbumMusicBrainzId,
     string AlbumTitle,
     string ArtistMusicBrainzId,
@@ -124,7 +124,7 @@ public sealed record ResolvedRecommendedAlbum(
 /// <summary>
 /// MusicBrainz WS/2 Release lookup response (/ws/2/release/{mbid}?inc=release-groups+artists&fmt=json).
 /// </summary>
-public sealed class MusicBrainzReleaseResponse
+internal sealed class LidarrFmMusicBrainzReleaseResponse
 {
     [JsonPropertyName("id")]
     public string? Id { get; set; }
@@ -133,22 +133,22 @@ public sealed class MusicBrainzReleaseResponse
     public string? Title { get; set; }
 
     [JsonPropertyName("release-group")]
-    public MusicBrainzReleaseGroupDto? ReleaseGroup { get; set; }
+    public LidarrFmMusicBrainzReleaseGroupDto? ReleaseGroup { get; set; }
 
     [JsonPropertyName("artist-credit")]
-    public List<MusicBrainzArtistCreditDto>? ArtistCredit { get; set; }
+    public List<LidarrFmMusicBrainzArtistCreditDto>? ArtistCredit { get; set; }
 }
 
 /// <summary>
 /// MusicBrainz WS/2 Release-Group search response (/ws/2/release-group/?query=...&fmt=json).
 /// </summary>
-public sealed class MusicBrainzReleaseGroupSearchResponse
+internal sealed class LidarrFmMusicBrainzReleaseGroupSearchResponse
 {
     [JsonPropertyName("release-groups")]
-    public List<MusicBrainzReleaseGroupDto>? ReleaseGroups { get; set; }
+    public List<LidarrFmMusicBrainzReleaseGroupDto>? ReleaseGroups { get; set; }
 }
 
-public sealed class MusicBrainzReleaseGroupDto
+internal sealed class LidarrFmMusicBrainzReleaseGroupDto
 {
     [JsonPropertyName("id")]
     public string? Id { get; set; }
@@ -160,19 +160,19 @@ public sealed class MusicBrainzReleaseGroupDto
     public string? PrimaryType { get; set; }
 
     [JsonPropertyName("artist-credit")]
-    public List<MusicBrainzArtistCreditDto>? ArtistCredit { get; set; }
+    public List<LidarrFmMusicBrainzArtistCreditDto>? ArtistCredit { get; set; }
 }
 
-public sealed class MusicBrainzArtistCreditDto
+internal sealed class LidarrFmMusicBrainzArtistCreditDto
 {
     [JsonPropertyName("name")]
     public string? Name { get; set; }
 
     [JsonPropertyName("artist")]
-    public MusicBrainzArtistDto? Artist { get; set; }
+    public LidarrFmMusicBrainzArtistDto? Artist { get; set; }
 }
 
-public sealed class MusicBrainzArtistDto
+internal sealed class LidarrFmMusicBrainzArtistDto
 {
     [JsonPropertyName("id")]
     public string? Id { get; set; }
