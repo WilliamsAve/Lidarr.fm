@@ -22,9 +22,8 @@
     <PropertyGroup>
       <ReleasePackageDir>$(IntermediateOutputPath)package/</ReleasePackageDir>
     </PropertyGroup>
-    <RemoveDir Directories="$(ReleasePackageDir)" />
     <MakeDir Directories="$(ReleasePackageDir)" />
-    <Copy SourceFiles="$(TargetPath);$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ReleasePackageDir)" />
+    <Copy SourceFiles="$(TargetPath);$(TargetDir)$(TargetName).pdb;$(TargetDir)$(TargetName).deps.json" DestinationFolder="$(ReleasePackageDir)" />
     <ZipDirectory SourceDirectory="$(ReleasePackageDir)" DestinationFile="$(TargetDir)$(TargetName).net8.0.zip" Overwrite="true" />
   </Target>
 

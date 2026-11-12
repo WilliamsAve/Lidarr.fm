@@ -52,10 +52,15 @@ jobs:
           if-no-files-found: error
 
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.version.outputs.version }}
+          target_commitish: main
+          name: Lidarr.fm v${{ steps.version.outputs.version }}
           files: _temp/bin/Release/LidarrFm/Lidarr.Plugin.LidarrFm.net8.0.zip
           body: |
             Minimum Lidarr Version: 3.1.0.0
+          draft: false
+          prerelease: false
           generate_release_notes: true
