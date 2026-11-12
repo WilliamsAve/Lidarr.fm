@@ -7,7 +7,7 @@ A native C# Import List plugin for **Lidarr** (targeting Lidarr's `plugins` / `d
 ## Features
 
 - **Last.fm Account Activity Integration**:
-  - Connects to Last.fm using your **Last.fm Username** and **API Key** (a default API key is pre-configured, or you can supply your own from [last.fm/api/account/create](https://www.last.fm/api/account/create)).
+  - Connects to Last.fm using only your **Last.fm Username** — Lidarr's built-in Last.fm API key is pre-configured automatically (no separate API key setup required).
   - Supports multiple user activity sources:
     - **Top Artists** (`user.getTopArtists`)
     - **Top Albums** (`user.getTopAlbums`)
@@ -17,7 +17,7 @@ A native C# Import List plugin for **Lidarr** (targeting Lidarr's `plugins` / `d
   - Ranks similar artists (`artist.getSimilar` / `track.getSimilar`) by cross-seed frequency and similarity rank, then pulls top albums (`artist.getTopAlbums`).
 - **MusicBrainz Release-Group ID Resolution**:
   - Last.fm's API returns edition-specific MusicBrainz *Release* MBIDs (or omits MBIDs), whereas Lidarr requires MusicBrainz *Release-Group* MBIDs (`ForeignAlbumId`).
-  - `MusicBrainzAlbumResolver` resolves Release MBIDs to Release-Group MBIDs via MusicBrainz WS/2 (`/ws/2/release/{mbid}?inc=release-groups+artists`), Lidarr SkyHook (`ISearchForNewAlbum`), and MusicBrainz Release-Group search fallback.
+  - `LidarrFmMusicBrainzAlbumResolver` resolves Release MBIDs to Release-Group MBIDs via MusicBrainz WS/2 (`/ws/2/release/{mbid}?inc=release-groups+artists`), Lidarr SkyHook (`ISearchForNewAlbum`), and MusicBrainz Release-Group search fallback.
 - **Safe Existing Artist Handling**:
   - If a recommended album belongs to an artist **already in Lidarr**:
     - **None** of the existing artist's monitoring options (`Monitored`, `MonitorNewItems`), profiles (`QualityProfileId`, `MetadataProfileId`), root folder, tags, or existing albums' monitoring settings are modified.
@@ -35,13 +35,14 @@ A native C# Import List plugin for **Lidarr** (targeting Lidarr's `plugins` / `d
 
 ---
 
-## Installation in Lidarr
+## Installation & Configuration in Lidarr
 
 1. Ensure your Lidarr instance is running a build with plugin support (`plugins` / `develop` >= `3.1.0`).
 2. In Lidarr, navigate to **System -> Plugins**.
 3. Paste `https://github.com/WilliamsAve/Lidarr.fm` into the GitHub URL box and click **Install** (or extract `Lidarr.Plugin.LidarrFm.net8.0.zip` into `<LidarrAppData>/plugins/WilliamsAve/Lidarr.fm/`).
 4. Restart Lidarr.
-5. Navigate to **Settings -> Import Lists**, click **+**, and select **Last.fm Recommended Albums**.
+5. Navigate to **Settings -> Import Lists**, click **+**, and select **Last.fm Recommended Albums (Lidarr.fm)**.
+6. Enter your **Last.fm Username**, choose your desired **Activity Source**, **Time Period**, and **New Artist** profile/monitoring options, and click **Test** then **Save**.
 
 ---
 
