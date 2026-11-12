@@ -17,8 +17,8 @@ namespace NzbDrone.Core.ImportLists.LidarrFm;
 public class LastFmRecommendImportList : ImportListBase<LastFmRecommendSettings>
 {
     private readonly ILastFmApiClient _lastFmApiClient;
-    private readonly IMusicBrainzAlbumResolver _albumResolver;
-    private readonly ILastFmAlbumImportService _albumImportService;
+    private readonly Func<IMusicBrainzAlbumResolver> _albumResolverFactory;
+    private readonly Func<ILastFmAlbumImportService> _albumImportServiceFactory;
 
     public override string Name => "Last.fm Recommended Albums";
 
@@ -26,7 +26,30 @@ public class LastFmRecommendImportList : ImportListBase<LastFmRecommendSettings>
 
     public override TimeSpan MinRefreshInterval => TimeSpan.FromHours(12);
 
+    /// <summary>
+    /// Public constructor used by Lidarr's DryIoc container.
+    /// Resolves <see cref="IMusicBrainzAlbumResolver"/> and <see cref="ILastFmAlbumImportService"/> lazily via
+    /// <see cref="IServiceProvider"/> during <see cref="Fetch"/> to prevent a singleton circular dependency
+    /// between <c>IImportListFactory -> IEnumerable&lt;IImportList&gt; -> LastFmRecommendImportList</c> and
+    /// <c>QualityProfileService / MetadataProfileService -> IImportListFactory</c>.
+    /// </summary>
     public LastFmRecommendImportList(
+        ILastFmApiClient lastFmApiClient,
+        IServiceProvider serviceProvider,
+        IImportListStatusService importListStatusService,
+        IConfigService configService,
+        IParsingService parsingService,
+        Logger logger)
+        : base(importListStatusService, configService, parsingService, logger)
+    {
+        _lastFmApiClient = lastFmApiClient;
+        _albumResolverFactory = () => (IMusicBrainzAlbumResolver)(serviceProvider.GetService(typeof(IMusicBrainzAlbumResolver))
+            ?? throw new InvalidOperationException("Unable to resolve IMusicBrainzAlbumResolver from container."));
+        _albumImportServiceFactory = () => (ILastFmAlbumImportService)(serviceProvider.GetService(typeof(ILastFmAlbumImportService))
+            ?? throw new InvalidOperationException("Unable to resolve ILastFmAlbumImportService from container."));
+    }
+
+    internal LastFmRecommendImportList(
         ILastFmApiClient lastFmApiClient,
         IMusicBrainzAlbumResolver albumResolver,
         ILastFmAlbumImportService albumImportService,
@@ -37,8 +60,8 @@ public class LastFmRecommendImportList : ImportListBase<LastFmRecommendSettings>
         : base(importListStatusService, configService, parsingService, logger)
     {
         _lastFmApiClient = lastFmApiClient;
-        _albumResolver = albumResolver;
-        _albumImportService = albumImportService;
+        _albumResolverFactory = () => albumResolver;
+        _albumImportServiceFactory = () => albumImportService;
     }
 
     public override IEnumerable<ProviderDefinition> DefaultDefinitions
@@ -76,12 +99,13 @@ public class LastFmRecommendImportList : ImportListBase<LastFmRecommendSettings>
             _logger.Debug("Lidarr.fm fetched {0} recommended album candidates from Last.fm for user '{1}'.",
                 candidates.Count, Settings.UserId);
 
+            var albumResolver = _albumResolverFactory();
             var resolvedAlbums = new List<ResolvedRecommendedAlbum>();
             var seenAlbumMbids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var candidate in candidates)
             {
-                var resolved = _albumResolver.ResolveAlbum(candidate, Settings);
+                var resolved = albumResolver.ResolveAlbum(candidate, Settings);
                 if (resolved == null || !seenAlbumMbids.Add(resolved.AlbumMusicBrainzId))
                 {
                     continue;
@@ -96,7 +120,8 @@ public class LastFmRecommendImportList : ImportListBase<LastFmRecommendSettings>
                 return items;
             }
 
-            var summary = _albumImportService.ImportRecommendedAlbums(importListDefinition, Settings, resolvedAlbums);
+            var albumImportService = _albumImportServiceFactory();
+            var summary = albumImportService.ImportRecommendedAlbums(importListDefinition, Settings, resolvedAlbums);
 
             foreach (var album in summary.ProcessedAlbums)
             {
